@@ -1,10 +1,9 @@
-from app.database import Base
-from sqlalchemy.orm import Mapped, mapped_column
+from pydantic import BaseModel, Field
 
 
-class Book(Base):
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    title: Mapped[str]
-    author: Mapped[str]
-    publication: Mapped[int]
-    status: Mapped[str] = mapped_column(default='free')
+class BookPublic(BaseModel):
+    id: int
+    title: str
+    author: str
+    publication: int
+    status: str = Field(default='free')

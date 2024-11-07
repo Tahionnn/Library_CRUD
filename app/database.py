@@ -17,7 +17,7 @@ DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT
 
 
 engine = create_async_engine(DATABASE_URL)
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+new_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 created_at = Annotated[datetime, mapped_column(server_default=func.now())]
@@ -43,3 +43,5 @@ async def create_tables():
 async def delete_tables():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+
