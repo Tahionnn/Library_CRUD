@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from enum import Enum
 
 
 class BookPublic(BaseModel):
@@ -6,4 +7,9 @@ class BookPublic(BaseModel):
     title: str
     author: str
     publication: int
-    status: str = Field(default='free')
+    status: bool = Field(default=True)
+
+
+class UserRole(Enum):
+    user = 'user'
+    admin = 'admin'

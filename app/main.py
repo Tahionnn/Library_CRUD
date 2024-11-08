@@ -19,7 +19,7 @@ async def add_book(book_id: int, book: BookPublic):
         return {'message': f'add book with id={new_book.id} at {new_book.created_at}'}
     
 
-@app.get("/book/{book_id}")
+@app.get("/book/{book_id}", response_model=BookPublic)
 async def get_book_by_id(book_id: int):
     async with new_session() as session:
         query = select(Book).where(Book.id == book_id)
