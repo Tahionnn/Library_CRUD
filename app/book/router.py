@@ -1,17 +1,18 @@
-from fastapi import FastAPI
-from app.book.router import book_router
-from app.user.router import user_router
-from app.auth.router import auth_router
+from fastapi import APIRouter, HTTPException, status, Depends
+from typing import Annotated
+from app.book.models import Book
+from app.user.models import User
+from app.database import new_session
+from app.book.schemas import BookPublic
+from app.auth.router import *
+from sqlalchemy import select, delete, update
 
-app = FastAPI()
 
 
-routers = (user_router, book_router, auth_router)
+book_router = APIRouter(prefix='/books', tags=['Books methods'])
 
-for router in routers:
-    app.include_router(router)
-'''
-@app.post("/add/{book_id}")
+
+@book_router.post("/add/{book_id}")
 async def add_book(book_id: int, book: BookPublic, current_user: Annotated[User, Depends(get_current_admin_user)]):
     async with new_session() as session:
         data = book.model_dump()
@@ -22,7 +23,7 @@ async def add_book(book_id: int, book: BookPublic, current_user: Annotated[User,
         return {'message': f'add book with id={new_book.id} at {new_book.created_at}'}
     
 
-@app.get("/book/{book_id}") #, response_model=BookPublic
+@book_router.get("/get/{book_id}") #, response_model=BookPublic
 async def get_book_by_id(book_id: int):
     async with new_session() as session:
         query = select(Book).where(Book.id == book_id)
@@ -33,7 +34,7 @@ async def get_book_by_id(book_id: int):
     return result
 
 
-@app.delete("/delete/{book_id}")
+@book_router.delete("/delete/{book_id}")
 async def delete_book_by_id(book_id: int, current_user: Annotated[User, Depends(get_current_admin_user)]):
     async with new_session() as session:
         delete_query = delete(Book).where(Book.id == book_id)
@@ -43,7 +44,7 @@ async def delete_book_by_id(book_id: int, current_user: Annotated[User, Depends(
     return {'message': f'delete book with id={book_id}'}
 
 
-@app.put("/update/{book_id}")
+@book_router.put("/update/{book_id}")
 async def update_book_by_id(book_id: int, book: BookPublic, current_user: Annotated[User, Depends(get_current_admin_user)]):
     async with new_session() as session:
         data = book.model_dump()
@@ -54,51 +55,7 @@ async def update_book_by_id(book_id: int, book: BookPublic, current_user: Annota
     return {'message': f'update book with id={book_id}'}
 
 
-@app.post("/register/")
-async def register_user(user_data: UserRegister):
-    async with new_session() as session:
-        result_user = await session.execute(select(User).where(User.email == user_data.email))
-        user = result_user.scalar_one_or_none()
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='A user with email address={user_data.email} already exists.'
-        )
-    user_dict = user_data.model_dump()
-    user_dict['password']  = get_password_hash(user_data.password)
-    new_user = User(**user_dict)
-    session.add(new_user)
-    await session.flush()
-    await session.commit()
-    return {'message': f'{user_data.username} has been  registered'}
-
-
-@app.post("/token")
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> Token:
-    user = await authenticate_user(username_or_email=form_data.username, password=form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"}, 
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return Token(access_token=access_token, token_type="bearer")
-
-
-@app.get("/users/me/", response_model=UserRegister)
-async def read_users_me(
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    return current_user
-
-
-@app.put("/take/{book_id}")
+@book_router.put("/take/{book_id}")
 async def take_book_by_id(book_id: int, user_id: int):
     async with new_session() as session:
         result_book = await session.execute(select(Book).where(Book.id == book_id))
@@ -131,4 +88,3 @@ async def take_book_by_id(book_id: int, user_id: int):
             raise HTTPException(status_code=400, detail="Book is already taken")
     
     return {'message': f'{user_id} took a book with id={book_id}'}
-'''
