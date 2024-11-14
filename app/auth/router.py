@@ -1,5 +1,11 @@
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.book.router import return_book_by_id
+else:
+    return_book_by_id = "return_book_by_id"
 from app.auth.schemas import Token
 from app.auth.utils import *
+from app.sheduler import *
 
 from fastapi import APIRouter
 
@@ -23,6 +29,7 @@ async def register_user(user_data: UserRegister):
     session.add(new_user)
     await session.flush()
     await session.commit()
+    
     return {'message': f'{user_data.username} has been  registered'}
 
 
@@ -42,4 +49,5 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+
     return Token(access_token=access_token, token_type="bearer")

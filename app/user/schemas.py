@@ -8,7 +8,6 @@ class UserRole(Enum):
     admin = 'admin'
 
 class UserRegister(BaseModel):
-    id: int
     username: str = Field(..., min_length=1, max_length=50)
     email: EmailStr = Field(...)
     password: str 

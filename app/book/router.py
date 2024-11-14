@@ -1,19 +1,24 @@
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.book.router import return_book_by_id
+else:
+    return_book_by_id = "return_book_by_id"
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Annotated
-from app.book.models import Book
+from app.book.models import Book, TakenBook
 from app.user.models import User
 from app.database import new_session
 from app.book.schemas import BookPublic
 from app.auth.router import *
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, insert
 
 
 
 book_router = APIRouter(prefix='/books', tags=['Books methods'])
 
 
-@book_router.post("/add/{book_id}")
-async def add_book(book_id: int, book: BookPublic, current_user: Annotated[User, Depends(get_current_admin_user)]):
+@book_router.post("/add/")
+async def add_book(book: BookPublic, current_user: Annotated[User, Depends(get_current_admin_user)]):
     async with new_session() as session:
         data = book.model_dump()
         new_book = Book(**data)
@@ -82,9 +87,37 @@ async def take_book_by_id(book_id: int, user_id: int):
             )
             await session.execute(update_book)
             await session.flush()
+
+            insert_take = (
+                insert(TakenBook)
+                .values(
+                    {
+                        "user_id": user_id,
+                        "book_id": book_id,
+                    }
+                )
+            )
+            await session.execute(insert_take)
+            await session.flush()
             
             await session.commit()
         else:
             raise HTTPException(status_code=400, detail="Book is already taken")
-    
+
     return {'message': f'{user_id} took a book with id={book_id}'}
+
+
+@book_router.put("/return/{book_id}")
+async def return_book_by_id(book_id: int, user: Annotated[User, Depends(get_current_user)]):
+    async with new_session() as session:
+        result_book = await session.execute(select(TakenBook).where(TakenBook.book_id == book_id))
+        book = result_book.scalar_one_or_none()
+        if book is None:
+            raise HTTPException(status_code=404, detail="Book not found")
+        update_book = update(Book).where(Book.id == book_id).values({"status": True, "user_id": None})
+        await session.execute(update_book)
+        await session.flush()
+        delete_query = delete(TakenBook).where(TakenBook.book_id == book_id)
+        await session.execute(delete_query)
+        await session.flush()
+        await session.commit()

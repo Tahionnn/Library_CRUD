@@ -4,13 +4,12 @@ if TYPE_CHECKING:
 else:
     User = "User"
 
-
 from app.database import Base
-#from app.user.models import User
 from typing import List
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import ENUM 
+from sqlalchemy.dialects.postgresql import ENUM
+from datetime import datetime, timedelta
 
 
 class Book(Base):
@@ -21,3 +20,11 @@ class Book(Base):
     status: Mapped[bool] = mapped_column(default=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=True)
     user: Mapped["User"] = relationship("User", back_populates="books")
+
+
+class TakenBook(Base):
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("book.id"), nullable=True)
+    taken_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow()) 
+    return_date: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.utcnow()+timedelta(days=30)) 
